@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Get user location</title>
+	<style type="text/css">
+		html, body {
+			height: 100%;
+			margin: 0px;
+			padding: 0px
+     	}
+
+		#map-canvas {
+			height: 100%;
+			margin: 0px;
+			padding: 0px
+     	}
+	</style>
+
+	<script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+	<script type="text/javascript">
+		var map, DEFAULT_LAT = 19.08225, DEFAULT_LON = 72.8811803;
+
+		function get_user_location() {
+			if (navigator.geolocation) {
+				// Browser supports geo location
+				navigator.geolocation.getCurrentPosition(position_found, position_not_found);
+			} else {
+				// Browser does not supports geo location !!!
+				// Set default lat long
+				initialize_map();
+			}
+		}
+
+		function position_found(position) {
+			initialize_map(position.coords.latitude, position.coords.longitude);
+		}
+
+		function position_not_found(error) {
+			switch(error.code) {
+				case error.PERMISSION_DENIED:
+					alert("You have denied the request for Geolocation.");
+				break;
+				case error.POSITION_UNAVAILABLE:
+					alert("Location information is unavailable.");
+				break;
+				case error.TIMEOUT:
+					alert("The request to get user location timed out.");
+				break;
+				case error.UNKNOWN_ERROR:
+					alert("An unknown error occurred.");
+				break;
+			}
+			initialize_map();
+		}
+
+		function initialize_map(lat, lon) {
+			lat = typeof(lat) === 'undefined' ? DEFAULT_LAT : lat;
+			lon = typeof(lon) === 'undefined' ? DEFAULT_LON : lon;
+			
+			var mapOptions = {
+				zoom: 8,
+				center: new google.maps.LatLng(lat, lon)
+			};
+			
+			map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+		}
+
+		google.maps.event.addDomListener(window, 'load', get_user_location);
+	</script>
+</head>
+<body>
+	<div id="map-canvas"></div>
+</body>
+</html>

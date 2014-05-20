@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Marker</title>
+	<style type="text/css">
+		html, body {
+			height: 100%;
+			margin: 0px;
+			padding: 0px
+     	}
+
+		#map-canvas {
+			height: 100%;
+			margin: 0px;
+			padding: 0px
+     	}
+	</style>
+
+	<script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
+	<script type="text/javascript">
+		var map, mumbaiLatLon;
+		function initialize_map() {
+			mumbaiLatLon = new google.maps.LatLng(19.08225,72.8811803);
+			
+			var mapOptions = {
+				zoom: 8,
+				center: mumbaiLatLon
+			};
+			map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+
+			// Add marker
+			var marker = new google.maps.Marker({
+				position: mumbaiLatLon,
+				map: map,
+				title: 'This is marker title'
+			});
+		}
+
+		google.maps.event.addDomListener(window, 'load', initialize_map);
+	</script>
+</head>
+<body>
+	<div id="map-canvas"></div>
+</body>
+</html>
