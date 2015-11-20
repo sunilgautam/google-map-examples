@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Marker helper</title>
+    <style type="text/css">
+    #map-canvas {
+        height: 600px;
+        width: 100%;
+    }
+
+    .marker-label {
+        color: red;
+        background-color: white;
+        font-size: 12px;
+        padding: 2px;
+        text-align: center;
+        width: 45px;
+        border: 1px solid black;
+        white-space: nowrap;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    input.location-input {
+        padding: 10px;
+    }
+
+    button#input-save {
+        padding: 10px;
+    }
+
+    #prev div {
+        padding: 5px;
+    }
+
+    #prev span {
+        padding: 5px;
+    }
+    </style>
+</head>
+<body>
+    <div id="map-canvas"></div>
+    <div style="padding: 15px;">
+        <label>Location: </label>
+        <span id="lat" class="location-input"></span>
+        <span id="lon" class="location-input"></span>
+    </div>
+    <div style="padding: 15px;">
+        <input type="text" id="input-lat" class="location-input" placeholder="Lat">
+        <input type="text" id="input-lon" class="location-input" placeholder="Lon">
+        <input type="text" id="input-tag" class="location-input" placeholder="Tag">
+        <button id="input-save">Add</button>
+    </div>
+    <div style="padding: 15px;" id="prev">
+    </div>
+</body>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?libraries=places,geometry&sensor=false"></script>
+<script type="text/javascript" src="markerwithlabel.js"></script>
+<script type="text/javascript">
+    (function($, window, document, undefined) {
+    'use strict';
+
+    var map,
+        initialLocation,
+        marker,
+        markers = [],
+        i,
+        currentCenter,
+        selection,
+        range,
+        prevDiv,
+        iconSrc = 'http://maps.google.com/mapfiles/ms/micons/blue-dot.png';
+
+    function setLocationInfo(latLng) {
+        $('#lat').text(latLng.lat());
+        $('#lon').text(latLng.lng());
+
+        currentCenter = latLng;
+    }
+
+    function moveToThisLocation(latLng, isDrag) {
+        if (!isDrag) {
+            marker.setPosition(latLng);
+        }
+        setLocationInfo(latLng);
+        setAllDistances();
+        fitAllBounds();
+        // console.log(latLng.lat() + " - " + latLng.lng());
+    }
+
+    function setAllDistances() {
+        var distance;
+        for(i = 1; i < markers.length; i++) {
+            distance = google.maps.geometry.spherical.computeDistanceBetween(currentCenter, markers[i].getPosition());
+            markers[i].labelContent = (parseFloat(distance / 1000).toFixed(2) + ' km');
+            markers[i].label.setContent();
+        }
+    }
+
+    function fitAllBounds() {
+        var bounds = new google.maps.LatLngBounds();
+        for(i = 0; i < markers.length; i++) {
+            bounds.extend(markers[i].getPosition());
+        }
+        map.fitBounds(bounds);
+        map.setZoom(map.getZoom()-1);
+    }
+
+    function checkNotAdded(lat, lng) {
+        var pos, found = false;
+        for(i = 0; i < markers.length; i++) {
+            pos = markers[i].getPosition();
+            if (pos.lat() === lat && pos.lng() === lng) {
+                found = true;
+            }
+        }
+        return !found;
+    }
+
+    function renderPrev() {
+        var prevLoc = localStorage.getItem('prev-used') ? JSON.parse(localStorage.getItem('prev-used')) : [];
+        var prevHtml = '';
+        for (i = 0; i < prevLoc.length; i++) {
+            prevHtml += '<div><span><a href="#" data-lat="'+ prevLoc[i].lat +'" data-lng="'+ prevLoc[i].lng +'" data-tag="'+ prevLoc[i].tag +'">Select</a></span><span>'+ prevLoc[i].lat +'</span><span>'+ prevLoc[i].lng +'</span><span>'+ prevLoc[i].tag +'</span></div>';
+        }
+        prevDiv.html(prevHtml);
+    }
+
+    function addMarker(lat, lng, tag, fromLocal) {
+        var prevLoc;
+        if ($.isNumeric(lat) && $.isNumeric(lng)) {
+            lat = parseFloat(lat);
+            lng = parseFloat(lng);
+            if (checkNotAdded(lat, lng)) {
+                var markerPosition = new google.maps.LatLng(lat, lng);
+                var distance = google.maps.geometry.spherical.computeDistanceBetween(currentCenter, markerPosition);
+                // Add marker
+                var otherMarker = new MarkerWithLabel({
+                    position: markerPosition,
+                    map: map,
+                    icon: iconSrc,
+                    labelContent: (Math.ceil(distance / 1000) + ' km'),
+                    labelAnchor: new google.maps.Point(26, 0),
+                    labelClass: "marker-label",
+                    labelStyle: {opacity: 0.75}
+                });
+                markers.push(otherMarker);
+
+                fitAllBounds();
+
+                if (fromLocal !== true) {
+                    prevLoc = localStorage.getItem('prev-used') ? JSON.parse(localStorage.getItem('prev-used')) : [];
+                    prevLoc.push({ lat: lat, lng: lng, tag: tag });
+                    localStorage.setItem('prev-used', JSON.stringify(prevLoc));
+                    renderPrev();
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function initialize_map() {
+        initialLocation = new google.maps.LatLng(19.08225, 72.8811803);
+        currentCenter = initialLocation;
+
+        var mapOptions = {
+            center: initialLocation
+        };
+        map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+        // Add marker
+        marker = new google.maps.Marker({
+            position: initialLocation,
+            map: map,
+            draggable: true,
+            title: 'Drag to select location'
+        });
+        markers.push(marker);
+
+        google.maps.event.addListener(map, 'click', function(event) {
+            moveToThisLocation(event.latLng);
+        });
+
+        google.maps.event.addListener(marker, 'dragend', function (event) {
+            moveToThisLocation(event.latLng, true);
+        });
+
+        // Set initial position
+        setLocationInfo(marker.getPosition());
+        map.setZoom(16);
+
+        prevDiv = $('#prev');
+        $('.location-input').on('click', function(e) {
+            var target = e.target;
+            if (target.tagName === "INPUT") {
+                target.select();
+            } else {
+                if (window.getSelection && document.createRange) {
+                    selection = window.getSelection();
+                    range = document.createRange();
+                    range.selectNodeContents($(this)[0]);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                } else if (document.selection && document.body.createTextRange) {
+                    range = document.body.createTextRange();
+                    range.moveToElementText($(this)[0]);
+                    range.select();
+                }
+            }
+        });
+        $('#input-save').on('click', function(e) {
+            e.preventDefault();
+
+            var lat = $('#input-lat').val();
+            var lng = $('#input-lon').val();
+            var tag = $('#input-tag').val();
+            
+            if (addMarker(lat, lng, tag)) {
+                $('#input-lat').val('');
+                $('#input-lon').val('');
+                $('#input-tag').val('');
+            }
+            
+        });
+        prevDiv.on('click', 'a', function(e) {
+            e.preventDefault();
+
+            addMarker(this.getAttribute('data-lat'), this.getAttribute('data-lng'), this.getAttribute('data-tag'), true);
+        });
+
+        renderPrev();
+    }
+    google.maps.event.addDomListener(window, 'load', initialize_map);
+
+})(jQuery, window, document);
+</script>
+</html>
