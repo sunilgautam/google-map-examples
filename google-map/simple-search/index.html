@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Marker helper</title>
+    <style type="text/css">
+    #map-canvas {
+        height: 600px;
+        width: 100%;
+    }
+
+    #map-search-input {
+        background-color: #fff;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        margin-left: 12px;
+        padding: 0 11px 0 13px;
+        text-overflow: ellipsis;
+        width: 300px;
+    }
+    .map-controls {
+        margin-top: 10px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .loc-info {
+        padding: 15px;
+    }
+    .loc-info input {
+        padding: 15px;
+    }
+    </style>
+</head>
+<body>
+    <input id="map-search-input" class="map-controls" type="text" placeholder="Search Box">
+    <div id="map-canvas"></div>
+    <div class="loc-info">
+        <input id="lat" name="lat">
+        <input id="lon" name="lon">
+    </div>
+</body>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?libraries=places&sensor=false"></script>
+<script type="text/javascript">
+(function($, window, document, undefined) {
+    'use strict';
+
+    var map, initialLocation, marker;
+
+    function setLocationInfo(latLng) {
+        $('#lat').val(latLng.lat());
+        $('#lon').val(latLng.lng());
+    }
+
+    function moveToThisLocation(latLng, isDrag) {
+        map.panTo(latLng);
+        if (!isDrag) {
+            marker.setPosition(latLng);
+        }
+        setLocationInfo(latLng);
+        // console.log(latLng.lat() + " - " + latLng.lng());
+    }
+
+    function initialize_map() {
+        var savedLat = $('#lat').val();
+        var savedLng = $('#lon').val();
+
+        if (savedLat && savedLng && $.isNumeric(savedLat) && $.isNumeric(savedLng)) {
+            initialLocation = new google.maps.LatLng(savedLat, savedLng);
+        } else {
+            initialLocation = new google.maps.LatLng(19.08225, 72.8811803);
+        }
+
+        var mapOptions = {
+            center: initialLocation
+        };
+        map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+        // Add marker
+        marker = new google.maps.Marker({
+            position: initialLocation,
+            map: map,
+            draggable: true,
+            title: 'Drag to select location'
+        });
+
+        // Create the search box and link it to the UI element.
+        var input = document.getElementById('map-search-input');
+        var searchBox = new google.maps.places.SearchBox(input);
+        map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+        // Bias the SearchBox results towards current map's viewport.
+        map.addListener('bounds_changed', function() {
+            searchBox.setBounds(map.getBounds());
+        });
+
+        $(input).on('keypress', function(e) {
+            if (e.which == 13 || e.keyCode == 13) {
+                e.preventDefault();
+                e.stopPropagation();
+            }                    
+        });
+
+        searchBox.addListener('places_changed', function() {
+            var places = searchBox.getPlaces();
+
+            if (places.length === 0) {
+                return;
+            }
+
+            // Get only first search result
+            var place = places[0];
+            if (!place.geometry) {
+                return;
+            }
+
+            // For each place, get the icon, name and location.
+            var bounds = new google.maps.LatLngBounds();
+
+            moveToThisLocation(place.geometry.location);
+
+            if (place.geometry.viewport) {
+                bounds.union(place.geometry.viewport);
+            } else {
+                bounds.extend(place.geometry.location);
+            }
+            map.fitBounds(bounds);
+        });
+
+        google.maps.event.addListener(map, 'click', function(event) {
+            moveToThisLocation(event.latLng);
+        });
+
+        google.maps.event.addListener(marker, 'dragend', function (event) {
+            moveToThisLocation(event.latLng, true);
+        });
+
+        // Set initial position
+        setLocationInfo(marker.getPosition());
+        map.setZoom(16);
+    }
+    google.maps.event.addDomListener(window, 'load', initialize_map);
+
+})(jQuery, window, document);
+</script>
+</html>
