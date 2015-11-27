@@ -9,17 +9,15 @@
         width: 100%;
     }
 
-    .marker-label {
-        color: red;
-        background-color: white;
+    .tooltip {
+        background-color: #424D56;
+        border-radius: 2px 2px 2px 2px;
+        color: #FFFFFF;
+        display: inline-block;
         font-size: 12px;
-        padding: 2px;
-        text-align: center;
-        width: 45px;
-        border: 1px solid black;
+        padding: 5px;
         white-space: nowrap;
-        font-size: 10px;
-        font-weight: bold;
+        width: auto;
     }
 
     input.location-input {
@@ -57,7 +55,7 @@
 </body>
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?libraries=places,geometry&sensor=false"></script>
-<script type="text/javascript" src="markerwithlabel.js"></script>
+<script src="../js/tooltip.js"></script>
 <script type="text/javascript">
     (function($, window, document, undefined) {
     'use strict';
@@ -71,6 +69,7 @@
         selection,
         range,
         prevDiv,
+        tooltipOptions,
         iconSrc = 'http://maps.google.com/mapfiles/ms/micons/blue-dot.png';
 
     function setLocationInfo(latLng) {
@@ -137,15 +136,18 @@
                 var markerPosition = new google.maps.LatLng(lat, lng);
                 var distance = google.maps.geometry.spherical.computeDistanceBetween(currentCenter, markerPosition);
                 // Add marker
-                var otherMarker = new MarkerWithLabel({
+                var otherMarker = new google.maps.Marker({
                     position: markerPosition,
                     map: map,
-                    icon: iconSrc,
-                    labelContent: (Math.ceil(distance / 1000) + ' km'),
-                    labelAnchor: new google.maps.Point(26, 0),
-                    labelClass: "marker-label",
-                    labelStyle: {opacity: 0.75}
+                    icon: iconSrc
                 });
+                tooltipOptions = {
+                    marker: otherMarker,
+                    content: ('<center>' + Math.ceil(distance / 1000) + ' km<br>' + tag + '</center>'),
+                    showOnHover: false,
+                    cssClass: 'tooltip' // name of a css class to apply to tooltip
+                };
+                new Tooltip(tooltipOptions);
                 markers.push(otherMarker);
 
                 fitAllBounds();
